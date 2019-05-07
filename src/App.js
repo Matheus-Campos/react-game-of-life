@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 import Cell from './components/Cell';
 
@@ -10,8 +10,10 @@ function App() {
   const [game, setGame] = useState(startGame());
   const [gameState, setGameState] = useState({ value: undefined, done: false });
 
-  // useEffect(() => console.log(cells, started, game, gen));
-
+  /**
+   * Fill the table with inactive cells, properly indexed for toggling
+   * the active property.
+   */
   function generateTable() {
     return cells.map((cell, index) => (
       <Cell
@@ -22,10 +24,18 @@ function App() {
     ));
   }
 
+  /**
+   * Run one round of the game. Is called every second by setInterval in
+   * startGame function.
+   */
   function runGame() {
     console.log('running the game...');
   }
 
+  /**
+   * Create a game state, setting an interval to the runGame function
+   * and cleaning the table and the interval after all.
+   */
   function* startGame() {
     setStarted(true);
     const interval = yield setInterval(runGame, 1000);
@@ -35,6 +45,27 @@ function App() {
     clearInterval(interval);
   }
 
+  /**
+   * Control the game state created by startGame function.
+   * Pause and unpause the game.
+   */
+  function toggleGameState() {
+    if (!gameState.done) {
+      const gs = game.next(gameState.value);
+      setGameState(gs);
+    } else {
+      const g = startGame();
+      setGame(g);
+      setGameState(g.next());
+    }
+  }
+
+  /**
+   * Toggle the active property of cells.
+   *
+   * @param {Event} event the event triggered by click
+   * @param {Number} cellIndex the index of the clicked cell
+   */
   function handleClick(event, cellIndex) {
     setCells(
       cells.map((cell, index) =>
@@ -48,19 +79,7 @@ function App() {
       <div className="game">{generateTable()}</div>
 
       <div className="settings">
-        <button
-          type="button"
-          onClick={() => {
-            if (!gameState.done) {
-              const gs = game.next(gameState.value);
-              setGameState(gs);
-            } else {
-              const g = startGame();
-              setGame(g);
-              setGameState(g.next());
-            }
-          }}
-        >
+        <button type="button" onClick={toggleGameState}>
           {started ? 'Stop' : 'Start'}
         </button>
       </div>
