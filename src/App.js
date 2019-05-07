@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import Cell from './components/Cell';
 
 const emptyCells = Array(70).fill({ active: false });
 
 function App() {
+  const [prevCells, setPrevCells] = useState(emptyCells);
   const [cells, setCells] = useState(emptyCells);
   const [started, setStarted] = useState(false);
   const [game, setGame] = useState(startGame());
   const [gameState, setGameState] = useState({ value: undefined, done: false });
+
+  useEffect(() => console.log(prevCells, cells), [cells, prevCells]);
 
   /**
    * Fill the table with inactive cells, properly indexed for toggling
@@ -26,10 +29,43 @@ function App() {
 
   /**
    * Run one round of the game. Is called every second by setInterval in
-   * startGame function.
+   * startGame generator function.
    */
   function runGame() {
     console.log('running the game...');
+
+    const newCells = cells.map((cell, index) => {
+      const neighbors = [
+        prevCells[index - 1],
+        prevCells[index + 1],
+        prevCells[index - 10],
+        prevCells[index - 9],
+        prevCells[index - 11],
+        prevCells[index + 10],
+        prevCells[index + 9],
+        prevCells[index + 11]
+      ];
+
+      const activeNeighbors = neighbors
+        .map(n => (n !== undefined && n.active ? 1 : 0))
+        .reduce((prev, next) => prev + next);
+
+      console.log(index, activeNeighbors);
+
+      if (cell.active) {
+        if (activeNeighbors < 2 || activeNeighbors > 3)
+          return { active: false };
+
+        return cell;
+      } else {
+        if (activeNeighbors === 3) return { active: true };
+
+        return cell;
+      }
+    });
+
+    setPrevCells(cells);
+    setCells(newCells);
   }
 
   /**
@@ -41,12 +77,13 @@ function App() {
     const interval = yield setInterval(runGame, 1000);
 
     setCells(emptyCells);
+    setPrevCells(emptyCells);
     setStarted(false);
     clearInterval(interval);
   }
 
   /**
-   * Control the game state created by startGame function.
+   * Control the game state created by startGame generator function.
    * Pause and unpause the game.
    */
   function toggleGameState() {
@@ -67,11 +104,12 @@ function App() {
    * @param {Number} cellIndex the index of the clicked cell
    */
   function handleClick(event, cellIndex) {
-    setCells(
-      cells.map((cell, index) =>
-        index === cellIndex ? { active: !cell.active } : cell
-      )
+    const newCells = cells.map((cell, index) =>
+      index === cellIndex ? { active: !cell.active } : cell
     );
+
+    setPrevCells(newCells);
+    setCells(newCells);
   }
 
   return (
