@@ -11,8 +11,6 @@ function App() {
   const [game, setGame] = useState(startGame());
   const [gameState, setGameState] = useState({ value: undefined, done: false });
 
-  useEffect(() => console.log(prevCells, cells), [cells, prevCells]);
-
   /**
    * Fill the table with inactive cells, properly indexed for toggling
    * the active property.
@@ -32,25 +30,36 @@ function App() {
    * startGame generator function.
    */
   function runGame() {
-    console.log('running the game...');
-
     const newCells = cells.map((cell, index) => {
-      const neighbors = [
-        prevCells[index - 1],
-        prevCells[index + 1],
-        prevCells[index - 10],
-        prevCells[index - 9],
-        prevCells[index - 11],
-        prevCells[index + 10],
-        prevCells[index + 9],
-        prevCells[index + 11]
-      ];
+      let neighbors = [prevCells[index - 10], prevCells[index + 10]];
+
+      // 10 is the number of cells in one row
+      if (index % 10 === 0) {
+        neighbors.push(
+          prevCells[index + 11],
+          prevCells[index - 9],
+          prevCells[index + 1]
+        );
+      } else if (index % 10 === 9) {
+        neighbors.push(
+          prevCells[index - 11],
+          prevCells[index + 9],
+          prevCells[index - 1]
+        );
+      } else {
+        neighbors.push(
+          prevCells[index - 11],
+          prevCells[index + 11],
+          prevCells[index - 9],
+          prevCells[index + 9],
+          prevCells[index - 1],
+          prevCells[index + 1]
+        );
+      }
 
       const activeNeighbors = neighbors
         .map(n => (n !== undefined && n.active ? 1 : 0))
-        .reduce((prev, next) => prev + next);
-
-      console.log(index, activeNeighbors);
+        .reduce((prev, next) => prev + next, 0);
 
       if (cell.active) {
         if (activeNeighbors < 2 || activeNeighbors > 3)
