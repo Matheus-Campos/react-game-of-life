@@ -1,26 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
 import Cell from './components/Cell';
 
-const emptyCells = Array(70).fill({ active: false });
+const emptyCells = Array(100).fill(false);
 
 function App() {
   const [prevCells, setPrevCells] = useState(emptyCells);
   const [cells, setCells] = useState(emptyCells);
   const [started, setStarted] = useState(false);
-  const [game, setGame] = useState(startGame());
-  const [gameState, setGameState] = useState({ value: undefined, done: false });
+  const [gameTimeout, setGameTimeout] = useState(0);
 
   /**
    * Fill the table with inactive cells, properly indexed for toggling
    * the active property.
    */
   function generateTable() {
-    return cells.map((cell, index) => (
+    return cells.map((active, index) => (
       <Cell
+        active={active}
+        handleClick={() => handleClick(index)}
         key={index}
-        handleClick={e => handleClick(e, index)}
-        active={cell.active}
       />
     ));
   }
@@ -30,7 +29,7 @@ function App() {
    * startGame generator function.
    */
   function runGame() {
-    const newCells = cells.map((cell, index) => {
+    const newCells = cells.map((active, index) => {
       let neighbors = [prevCells[index - 10], prevCells[index + 10]];
 
       // 10 is the number of cells in one row
@@ -61,60 +60,49 @@ function App() {
         .map(n => (n !== undefined && n.active ? 1 : 0))
         .reduce((prev, next) => prev + next, 0);
 
-      if (cell.active) {
-        if (activeNeighbors < 2 || activeNeighbors > 3)
-          return { active: false };
+      if (active) {
+        if (activeNeighbors < 2 || activeNeighbors > 3) return false;
 
-        return cell;
+        return active;
       } else {
-        if (activeNeighbors === 3) return { active: true };
+        if (activeNeighbors === 3) return true;
 
-        return cell;
+        return active;
       }
     });
 
+    console.log(newCells);
+
     setPrevCells(cells);
     setCells(newCells);
+
+    setGameTimeout(setTimeout(runGame, 1000));
   }
 
   /**
    * Create a game state, setting an interval to the runGame function
    * and cleaning the table and the interval after all.
    */
-  function* startGame() {
+  function startGame() {
     setStarted(true);
-    const interval = yield setInterval(runGame, 1000);
+    runGame();
+  }
 
+  function endGame() {
     setCells(emptyCells);
     setPrevCells(emptyCells);
     setStarted(false);
-    clearInterval(interval);
-  }
-
-  /**
-   * Control the game state created by startGame generator function.
-   * Pause and unpause the game.
-   */
-  function toggleGameState() {
-    if (!gameState.done) {
-      const gs = game.next(gameState.value);
-      setGameState(gs);
-    } else {
-      const g = startGame();
-      setGame(g);
-      setGameState(g.next());
-    }
+    clearTimeout(gameTimeout);
   }
 
   /**
    * Toggle the active property of cells.
    *
-   * @param {Event} event the event triggered by click
    * @param {Number} cellIndex the index of the clicked cell
    */
-  function handleClick(event, cellIndex) {
-    const newCells = cells.map((cell, index) =>
-      index === cellIndex ? { active: !cell.active } : cell
+  function handleClick(cellIndex) {
+    const newCells = cells.map((active, index) =>
+      index === cellIndex ? { active: !active } : active
     );
 
     setPrevCells(newCells);
@@ -126,7 +114,7 @@ function App() {
       <div className="game">{generateTable()}</div>
 
       <div className="settings">
-        <button type="button" onClick={toggleGameState}>
+        <button type="button" onClick={started ? endGame : startGame}>
           {started ? 'Stop' : 'Start'}
         </button>
       </div>
