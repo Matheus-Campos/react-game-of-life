@@ -2,26 +2,39 @@ import React, { useState } from 'react';
 
 import Cell from './components/Cell';
 
-const emptyCells = Array(100).fill(false);
+function createEmptyCells(emptyCells) {
+  for (let i = 0; i < 100; ++i) {
+    emptyCells[i] = Array(100);
+    for (let j = 0; j < 100; ++j) {
+      emptyCells[i][j] = false;
+    }
+  }
+
+  return emptyCells;
+}
+
+const emptyCells = createEmptyCells(Array(100));
 
 function App() {
   const [prevCells, setPrevCells] = useState(emptyCells);
   const [cells, setCells] = useState(emptyCells);
   const [started, setStarted] = useState(false);
-  const [gameTimeout, setGameTimeout] = useState(0);
+  const [gameInterval, setGameInterval] = useState(0);
 
   /**
    * Fill the table with inactive cells, properly indexed for toggling
    * the active property.
    */
   function generateTable() {
-    return cells.map((active, index) => (
-      <Cell
-        active={active}
-        handleClick={() => handleClick(index)}
-        key={index}
-      />
-    ));
+    return cells.map((row, rowIndex) =>
+      row.map((active, cellIndex) => (
+        <Cell
+          active={active}
+          handleClick={() => handleClick(rowIndex, cellIndex)}
+          key={`${rowIndex}${cellIndex}`}
+        />
+      ))
+    );
   }
 
   /**
@@ -29,54 +42,39 @@ function App() {
    * startGame generator function.
    */
   function runGame() {
-    const newCells = cells.map((active, index) => {
-      let neighbors = [prevCells[index - 10], prevCells[index + 10]];
+    const newCells = cells.map((row, rowIndex) =>
+      row.map((cell, cellIndex) => {
+        const neighbors = [
+          prevCells[rowIndex - 1][cellIndex],
+          prevCells[rowIndex][cellIndex - 1],
+          prevCells[rowIndex + 1][cellIndex],
+          prevCells[rowIndex][cellIndex + 1],
+          prevCells[rowIndex - 1][cellIndex - 1],
+          prevCells[rowIndex - 1][cellIndex + 1],
+          prevCells[rowIndex + 1][cellIndex - 1],
+          prevCells[rowIndex + 1][cellIndex + 1]
+        ];
 
-      // 10 is the number of cells in one row
-      if (index % 10 === 0) {
-        neighbors.push(
-          prevCells[index + 11],
-          prevCells[index - 9],
-          prevCells[index + 1]
-        );
-      } else if (index % 10 === 9) {
-        neighbors.push(
-          prevCells[index - 11],
-          prevCells[index + 9],
-          prevCells[index - 1]
-        );
-      } else {
-        neighbors.push(
-          prevCells[index - 11],
-          prevCells[index + 11],
-          prevCells[index - 9],
-          prevCells[index + 9],
-          prevCells[index - 1],
-          prevCells[index + 1]
-        );
-      }
+        const activeNeighbors = neighbors
+          .map(n => (n ? 1 : 0))
+          .reduce((prev, next) => prev + next, 0);
 
-      const activeNeighbors = neighbors
-        .map(n => (n !== undefined && n.active ? 1 : 0))
-        .reduce((prev, next) => prev + next, 0);
+        if (cell && (activeNeighbors >= 4 || activeNeighbors <= 1)) {
+          return false;
+        }
 
-      if (active) {
-        if (activeNeighbors < 2 || activeNeighbors > 3) return false;
+        if (!cell && activeNeighbors === 3) {
+          return true;
+        }
 
-        return active;
-      } else {
-        if (activeNeighbors === 3) return true;
-
-        return active;
-      }
-    });
+        return cell;
+      })
+    );
 
     console.log(newCells);
 
     setPrevCells(cells);
     setCells(newCells);
-
-    setGameTimeout(setTimeout(runGame, 1000));
   }
 
   /**
@@ -85,25 +83,25 @@ function App() {
    */
   function startGame() {
     setStarted(true);
-    runGame();
+    setGameInterval(setInterval(runGame, 2000));
   }
 
   function endGame() {
+    clearInterval(gameInterval);
     setCells(emptyCells);
     setPrevCells(emptyCells);
     setStarted(false);
-    clearTimeout(gameTimeout);
   }
 
   /**
    * Toggle the active property of cells.
    *
-   * @param {Number} cellIndex the index of the clicked cell
+   * @param {Number} rowIndex the index of the clicked cell row
+   * @param {Number} cellIndex the index of the clicked cell in the row
    */
-  function handleClick(cellIndex) {
-    const newCells = cells.map((active, index) =>
-      index === cellIndex ? { active: !active } : active
-    );
+  function handleClick(rowIndex, cellIndex) {
+    const newCells = [...cells];
+    newCells[rowIndex][cellIndex] = !cells[rowIndex][cellIndex];
 
     setPrevCells(newCells);
     setCells(newCells);
